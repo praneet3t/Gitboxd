@@ -7,15 +7,23 @@ import Heatmap from './Heatmap';
 import StatsCard from './StatsCard';
 import ActivityFeed from './ActivityFeed';
 import ListsGrid from './ListsGrid';
+import StatsPage from './StatsPage';
 
 interface ProfileViewProps {
   data: LetterboxdData;
   onReset: () => void;
 }
 
+type View = 'profile' | 'stats';
+
 export default function ProfileView({ data, onReset }: ProfileViewProps) {
+  const [view, setView] = useState<View>('profile');
   const years = useMemo(() => getYearsFromDiary(data.diary), [data.diary]);
   const [selectedYear, setSelectedYear] = useState(years[0] || new Date().getFullYear());
+
+  if (view === 'stats') {
+    return <StatsPage data={data} onBack={() => setView('profile')} />;
+  }
 
   const heatmapData = useMemo(
     () => generateHeatmapData(data.diary, data.films, selectedYear),
@@ -43,81 +51,89 @@ export default function ProfileView({ data, onReset }: ProfileViewProps) {
   return (
     <div className="min-h-screen bg-gh-bg text-gh-text">
       <header className="border-b border-gh-border">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">GitBoxd</h1>
-          <div className="space-x-4">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 bg-gh-border hover:bg-gh-text-secondary/20 rounded transition-colors"
-            >
-              Export JSON
-            </button>
-            <button
-              onClick={onReset}
-              className="px-4 py-2 bg-gh-border hover:bg-gh-text-secondary/20 rounded transition-colors"
-            >
-              Upload New
-            </button>
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-semibold">GitBoxd</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setView('stats')}
+                className="px-3 py-1.5 text-sm border border-gh-border hover:bg-gh-border/30 rounded-md transition-colors"
+              >
+                Insights
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-3 py-1.5 text-sm border border-gh-border hover:bg-gh-border/30 rounded-md transition-colors"
+              >
+                Export
+              </button>
+              <button
+                onClick={onReset}
+                className="px-3 py-1.5 text-sm bg-gh-green-3 hover:bg-gh-green-4 text-black font-semibold rounded-md transition-colors"
+              >
+                New Upload
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <aside className="lg:col-span-1">
-            <div className="sticky top-8">
+            <div className="sticky top-6">
               {data.profile.avatar && (
                 <img
                   src={data.profile.avatar}
                   alt={data.profile.displayName}
-                  className="w-full rounded-full mb-4"
+                  className="w-32 h-32 rounded-full mb-3 border-2 border-gh-border"
                 />
               )}
-              <h2 className="text-2xl font-bold mb-1">{data.profile.displayName}</h2>
-              <div className="text-gh-text-secondary mb-4">@{data.profile.username}</div>
+              <h2 className="text-xl font-semibold mb-0.5">{data.profile.displayName}</h2>
+              <div className="text-sm text-gh-text-secondary mb-3">@{data.profile.username}</div>
               {data.profile.bio && (
-                <p className="text-sm mb-4">{data.profile.bio}</p>
+                <p className="text-sm text-gh-text-secondary mb-3">{data.profile.bio}</p>
               )}
-              <div className="text-sm text-gh-text-secondary">
-                Joined {data.profile.joined}
+              <div className="text-xs text-gh-text-secondary flex items-center gap-1">
+                <span>🗓️</span> Joined {data.profile.joined}
               </div>
             </div>
           </aside>
 
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-3 space-y-6">
             <section>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  {data.stats.totalWatches} films in {selectedYear}
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-semibold text-gh-text-secondary">
+                  {heatmapData.reduce((sum, d) => sum + d.count, 0)} contributions in {selectedYear}
                 </h3>
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="bg-gh-border text-gh-text px-3 py-1 rounded"
+                  className="bg-gh-bg border border-gh-border text-gh-text text-sm px-2 py-1 rounded-md"
                 >
                   {years.map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
               </div>
-              <div className="bg-gh-border/30 p-4 rounded-lg overflow-x-auto">
+              <div className="border border-gh-border rounded-md p-4 overflow-x-auto">
                 <Heatmap data={heatmapData} year={selectedYear} />
               </div>
             </section>
 
             <StatsCard stats={data.stats} />
 
-            {data.lists.length > 0 && (
-              <section>
-                <h3 className="text-xl font-semibold mb-4">Lists</h3>
-                <ListsGrid lists={data.lists} films={data.films} />
-              </section>
-            )}
-
             <section>
-              <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
+              <h3 className="text-base font-semibold mb-3">Contribution activity</h3>
               <ActivityFeed diary={data.diary} films={data.films} />
             </section>
+
+            {data.lists.length > 0 && (
+              <section>
+                <h3 className="text-base font-semibold mb-3">Pinned Lists</h3>
+                <ListsGrid lists={data.lists.slice(0, 6)} films={data.films} />
+              </section>
+            )}
           </div>
         </div>
       </main>
